@@ -23,15 +23,15 @@ const fontMap: { [key: string]: number } = {
   "24": 0,
 }
 
-const content = /(\\f[^]+?) (?:\\\n)?([^\\][^]+?)\n/;
+const content = /(\\f[^]+?) (?:\\\n)?((?:[^\\]+|\\\n)+)/g;
+//(\\f[^]+?)(?:\\pard|(?!\\pard)(?:\\f))
 const fontSize = /\\fs(.+?) /;
 const appleGarbage = /\\AppleTypeServices(?:.+? )/g;
 
 function parseRtf(file: string) {
-  ///(\\f[^]+?)(?:\\pard|})/
   let better = file.replaceAll(appleGarbage, "");
   console.log(file.match(appleGarbage));
-  let lines = better.split(/(\\f[^]+?)\\pard/);
+  let lines = better.split(/(\\f[^]+?)(?:\\pard|})/);
   console.log(better);
   console.log("-".repeat(50));
   let md: Root = {
@@ -39,32 +39,55 @@ function parseRtf(file: string) {
     children: []
   };
   lines.forEach((line) => {
-    //console.log("start :" + line + ": end");
-    if (line.startsWith("\\f")) {
-      let reg = line.match(content);
-      if (!reg) {
-        return;
-      }
-      let regDone = reg[2].trim().replace(/\\$/, "");
-      let size = fontMap[(line.match(fontSize) || ["0", "24"])[1]];
+    if (line.startsWith("\\f") && !line.endsWith(";")) {
+      console.log("start :" + line + ": end");
+      let reg = [...line.matchAll(content)];
 
-      if (0 < size && size < 4) {
-        md.children.push({
-          type: 'heading',
-          depth: size as 2 | 1 | 3 | 4 | 5 | 6,
-          children: [{
+      let children = [];
+
+      reg.forEach((r) => {
+        if (!r) {
+          return;
+        }
+        let tags = r[1].split("\\");
+        console.log(tags); 
+
+        console.log(":" + r[2] + ":");
+        let split = false;
+        split = r[2].includes("\\") || r[2].includes("\n");
+        let regDone = r[2].replace(/\\/, "").replace(/\\$/, "");
+        console.log(":" + regDone + ":");
+        let size = fontMap[(r[1].match(fontSize) || ["0", "24"])[1]];
+
+        if (0 < size && size < 4) {
+          md.children.push({
+            type: 'heading',
+            depth: size as 2 | 1 | 3 | 4 | 5 | 6,
+            children: [{
+              type: 'text',
+              value: regDone
+            }]
+          });
+        } else if (size == 0) {
+          children.push({
             type: 'text',
             value: regDone
-          }]
-        })
-      } else if (size == 0) {
+          });
+        }
+        if (split && children.length > 0) {
+          md.children.push({
+            type: 'paragraph',
+            children: children
+          })
+        }
+        children = [];
+      })
+
+      if (children.length > 0) {
         md.children.push({
           type: 'paragraph',
-          children: [{
-            type: 'text',
-            value: regDone
-          }]
-        });
+          children: children
+        })
       }
     }
   })
