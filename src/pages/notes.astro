@@ -13,7 +13,10 @@
     <title>Notes</title>
   </head>
   <body>
-    <button id="header-btn">Header</button>
+    <button id="header-1-btn">H1</button>
+    <button id="header-2-btn">H2</button>
+    <button id="p-btn">P</button>
+    <button id="list-btn">List</button>
     <div contenteditable id="content"></div>
     <div id="test"></div>
     <script type="module">
@@ -22,7 +25,6 @@
 
       const content = document.getElementById("content");
       const test = document.getElementById("test");
-      const headerBtn = document.getElementById("header-btn");
 
       const turndown = new TurndownService({
         headingStyle: "atx",
@@ -34,22 +36,121 @@
 
       function refreshHTML() {
         md = turndown.turndown(content.innerHTML);
-        content.innerHTML = marked.parse(md);
-        test.innerHTML = content.innerHTML;
+        //content.innerHTML = marked.parse(md);
+        test.innerHTML = marked.parse(md);
       }
+
+      content.onbeforeinput = function (evt) {
+        if (evt.inputType == "insertParagraph") {
+          // TODO: use selected for bullet points and stuff
+          let newTag = "p";
+
+          const selection = window.getSelection();
+          let selected = selection.anchorNode.parentNode;
+          console.log(selected.tagName);
+
+          if (selected.tagName == "LI") {
+            newTag = "li";
+          }
+
+          evt.preventDefault();
+          let newChild = document.createElement(newTag);
+          selected.parentNode.insertBefore(newChild, selected.nextSibling);
+
+          let range = document.createRange();
+          let newText = newChild.appendChild(document.createTextNode("")); // create an empty text node
+          range.selectNodeContents(newText);
+          range.collapse(false); // collapse the range to the end of the text node
+
+          // Remove any existing selections
+          selection.removeAllRanges();
+
+          // Add the new range to the selection
+          selection.addRange(range);
+        } else if (evt.inputType == "deleteContentBackward") {
+          const selection = window.getSelection();
+          let selected = selection.anchorNode.parentNode;
+          console.log(selected.tagName, selected.innerHTML);
+          if (selected.tagName == "LI" && selected.innerHTML == "") {
+            console.log("backspace " + selected.tagName);
+
+            evt.preventDefault();
+            let p = document.createElement("p");
+            selected.parentNode.insertBefore(p, selected.nextSibling);
+
+            let range = document.createRange();
+            let pText = p.appendChild(document.createTextNode("")); // create an empty text node
+            range.selectNodeContents(pText);
+            range.collapse(false); // collapse the range to the end of the text node
+
+            // Remove any existing selections
+            selection.removeAllRanges();
+          }
+        } else {
+          console.log(evt.inputType);
+        }
+      };
 
       content.innerHTML = marked.parse(md);
 
-      headerBtn.onclick = function (evt) {
+      function replaceElement(tag) {
         const selection = window.getSelection();
         let selected = selection.anchorNode.parentNode;
         console.log(selected.tagName);
-        let newTag = document.createElement("h1");
+        let newTag = document.createElement(tag);
         newTag.innerHTML = selected.innerHTML;
 
         selected.parentNode.replaceChild(newTag, selected);
         refreshHTML();
+      }
+
+      document.getElementById("list-btn").onclick = function (evt) {
+        const selection = window.getSelection();
+        let selected = selection.anchorNode.parentNode;
+
+        let newTag = document.createElement("ul");
+        newTag.innerHTML = "<li>" + selected.innerHTML + "</li>";
+
+        selected.parentNode.replaceChild(newTag, selected);
+        refreshHTML();
+        /*const selection = window.getSelection();
+        let selected = selection.anchorNode.parentNode;
+
+        selected.innerHTML = "";
+        selected.parentNode.replaceChild(
+          document.createElement("ul"),
+          selected
+        );
+        //selected.appendChild(document.createElement("li")).innerHTML = "hey";
+        selected.innerHTML = "<li>hey</li>";*/
+
+        /*let text = "hey";
+        let newTag = document.createElement("ul");
+        //newTag.innerHTML = selected.innerHTML;
+
+        selected.parentNode.replaceChild(newTag, selected);
+        let li = document.createElement("li");
+        selected.innerHTML = "";
+        li.innerHTML = text;
+        selected.appendChild(li);*/
+        //refreshHTML();
+      };
+
+      document.getElementById("header-1-btn").onclick = function (evt) {
+        replaceElement("h1");
+      };
+      document.getElementById("header-2-btn").onclick = function (evt) {
+        replaceElement("h2");
+      };
+      document.getElementById("p-btn").onclick = function (evt) {
+        replaceElement("p");
       };
     </script>
   </body>
 </html>
+<style>
+  p {
+    display: inline-block;
+    min-height: 1rem;
+  }
+</style>
