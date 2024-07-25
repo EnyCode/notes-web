@@ -1,0 +1,55 @@
+---
+
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="Astro description" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Notes</title>
+  </head>
+  <body>
+    <button id="header-btn">Header</button>
+    <div contenteditable id="content"></div>
+    <div id="test"></div>
+    <script type="module">
+      import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
+      import { TurndownService } from "/turndown.js";
+
+      const content = document.getElementById("content");
+      const test = document.getElementById("test");
+      const headerBtn = document.getElementById("header-btn");
+
+      const turndown = new TurndownService({
+        headingStyle: "atx",
+        bulletListMarker: "-",
+        codeBlockStyle: "fenced",
+      });
+
+      let md = "# Hello, world!";
+
+      function refreshHTML() {
+        md = turndown.turndown(content.innerHTML);
+        content.innerHTML = marked.parse(md);
+        test.innerHTML = content.innerHTML;
+      }
+
+      content.innerHTML = marked.parse(md);
+
+      headerBtn.onclick = function (evt) {
+        const selection = window.getSelection();
+        let selected = selection.anchorNode.parentNode;
+        console.log(selected.tagName);
+        let newTag = document.createElement("h1");
+        newTag.innerHTML = selected.innerHTML;
+
+        selected.parentNode.replaceChild(newTag, selected);
+        refreshHTML();
+      };
+    </script>
+  </body>
+</html>
